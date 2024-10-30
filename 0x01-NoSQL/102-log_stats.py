@@ -5,45 +5,38 @@ improve log_stats by adding the top 10 of the most present IPs
 
 from pymongo import MongoClient
 
-client = MongoClient("mongodb://localhost:27017/")
 
-db = client["logs"]
-nginx_collection = db["nginx"]
-
-def nginx_stats():
+def main():
     """
     Print statistics about Nginx logs stored in MongoDB, includein the top 10 IPs
     """
+    client = MongoClient("mongodb://localhost:27017")
+    nginx = client.logs.nginx
 
-    #counting the total number of logs
-    total_logs = nginx_collection.count_documents({})
-    print(f"{total_logs} logs")
+    total = nginx.count_documents({})
+    print("{} logs".format(total))
 
-    #count the logs for each HTTP method
+    methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
     print("Methods:")
-    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
     for method in methods:
-        count = nginx_collection.count_documents({"method": method})
-        print(f"\tmethod {method}: {count}")
+        count = nginx.count_documents({"method": method})
+        print("\tmethod {}: {}".format(method, count))
 
-    #counting logs
-    status_check_count = nginx_collection.count_documents({"method": "GET", "path": "/status"})
+    status = nginx.count_documents({"method": "GET", "path": "/status"})
+    print("{} status check".format(status))
 
-    #dinf the top 10 most frequent IPs
-    print("IPs:")
     pipeline = [
-            {"$group": {"_id": "$ip", "count": {"$sum": 1}}},
-            {"$sort": {"count": -1}},
-            {"$limit": 10}
-            ]
+        {"$group": {"_id": "$ip", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
 
-    #executing the aggregation pipeline
-    top_ips = nginx_collection.aggregate(pipeline)
+    ips = list(nginx.aggregate(pipeline))
+    print("IPs:")
+    for ip in ips:
+        print("\t{}: {}"
+              .format(ip.get('_id'), ip.get('count')))
 
-    #print each ip and its count
-    for ip in top_ips:
-        print(f"\t{ip['_id']}: {ip['count']}")
 
-
-if __name__ == "__main__":
-    nginx_stats()
+if __name__ == '__main__':
+    main()
