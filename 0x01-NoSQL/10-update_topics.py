@@ -7,4 +7,6 @@ def update_topics(mongo_collection, name, topics):
     """
     Returns: none
     """
-    mongo_collection.update_one({"name": name}, {"$set": {"topics": topics}})
+       name_to_update = {"name": name}
+    new_topics = {"$set": {"topics": topics}}
+    mongo_collection.update_many(name_to_update, new_topics)
